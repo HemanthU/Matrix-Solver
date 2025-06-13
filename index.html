@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>N×N Linear Equation Solver</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f0f2f5;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 700px;
+      margin: auto;
+      background-color: #fff;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    input[type="number"] {
+      width: 60px;
+      padding: 5px;
+      margin: 5px;
+    }
+    button {
+      padding: 10px 20px;
+      margin-top: 15px;
+      cursor: pointer;
+      background-color: #007bff;
+      border: none;
+      color: white;
+      border-radius: 6px;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .matrix {
+      margin-top: 10px;
+    }
+    #output {
+      margin-top: 25px;
+      padding: 15px;
+      background-color: #e6ffe6;
+      border-left: 5px solid green;
+      font-size: 1.1em;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>N×N Linear Equation Solver</h2>
+
+    <label>Enter number of variables: </label>
+    <input type="number" id="size" min="2" max="6" />
+    <button onclick="generateMatrix()">Generate Matrix</button>
+
+    <div id="matrixInput" class="matrix"></div>
+    <button onclick="solveSystem()">Solve</button>
+
+    <div id="output"></div>
+  </div>
+
+  <script>
+    function generateMatrix() {
+      const size = parseInt(document.getElementById('size').value);
+      const container = document.getElementById('matrixInput');
+      container.innerHTML = '';
+      for (let i = 0; i < size; i++) {
+        for (let j = 0; j < size; j++) {
+          container.innerHTML += `<input type="number" id="a_${i}_${j}" placeholder="A${i+1}${j+1}">`;
+        }
+        container.innerHTML += ` = <input type="number" id="b_${i}" placeholder="B${i+1}"><br/>`;
+      }
+    }
+
+    function getMinor(matrix, row, col) {
+      return matrix
+        .filter((_, i) => i !== row)
+        .map(r => r.filter((_, j) => j !== col));
+    }
+
+    function determinant(matrix) {
+      const n = matrix.length;
+      if (n === 1) return matrix[0][0];
+      if (n === 2) return matrix[0][0]*matrix[1][1] - matrix[0][1]*matrix[1][0];
+      let det = 0;
+      for (let i = 0; i < n; i++) {
+        const sign = i % 2 === 0 ? 1 : -1;
+        det += sign * matrix[0][i] * determinant(getMinor(matrix, 0, i));
+      }
+      return det;
+    }
+
+    function transpose(matrix) {
+      return matrix[0].map((_, i) => matrix.map(row => row[i]));
+    }
+
+    function cofactor(matrix) {
+      const n = matrix.length;
+      const cof = [];
+      for (let i = 0; i < n; i++) {
+        const row = [];
+        for (let j = 0; j < n; j++) {
+          const minor = getMinor(matrix, i, j);
+          row.push(((-1) ** (i + j)) * determinant(minor));
+        }
+        cof.push(row);
+      }
+      return cof;
+    }
+
+    function inverse(matrix) {
+      const det = determinant(matrix);
+      if (det === 0) return null;
+      const adj = transpose(cofactor(matrix));
+      return adj.map(row => row.map(val => val / det));
+    }
+
+    function multiply(A, B) {
+      const result = [];
+      for (let i = 0; i < A.length; i++) {
+        let sum = 0;
+        for (let j = 0; j < B.length; j++) {
+          sum += A[i][j] * B[j][0];
+        }
+        result.push([Math.round(sum * 10000) / 10000]);
+      }
+      return result;
+    }
+
+    function solveSystem() {
+      const n = parseInt(document.getElementById('size').value);
+      const A = [];
+      const B = [];
+      for (let i = 0; i < n; i++) {
+        const row = [];
+        for (let j = 0; j < n; j++) {
+          const val = parseFloat(document.getElementById(`a_${i}_${j}`).value);
+          if (isNaN(val)) {
+            alert("Please fill all A values");
+            return;
+          }
+          row.push(val);
+        }
+        A.push(row);
+        const bVal = parseFloat(document.getElementById(`b_${i}`).value);
+        if (isNaN(bVal)) {
+          alert("Please fill all B values");
+          return;
+        }
+        B.push([bVal]);
+      }
+
+      const invA = inverse(A);
+      const output = document.getElementById('output');
+      if (!invA) {
+        output.innerHTML = "❌ No unique solution (Determinant = 0)";
+        return;
+      }
+
+      const solution = multiply(invA, B);
+      output.innerHTML = "<strong>✅ Solution:</strong><br>";
+      for (let i = 0; i < n; i++) {
+        output.innerHTML += `x<sub>${i+1}</sub> = ${solution[i][0]}<br>`;
+      }
+    }
+  </script>
+</body>
+</html>
